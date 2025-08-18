@@ -1,11 +1,11 @@
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os 
 from dotenv import load_dotenv
 load_dotenv()
 
 class AIProvider():
     def __init__(self):
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=os.environ['GEMINI_API_KEY'],
             base_url="https://generativelanguage.googleapis.com/v1beta/"
         )
@@ -17,12 +17,12 @@ provider = AIProvider()
 def get_ai_client():
     return provider.get_client()
 
-def call_gemini(system_message, user_message, response_schema = None, model="gemini-2.5-flash-lite"):
+async def call_gemini(system_message, user_message, response_schema = None, model="gemini-2.5-flash-lite"):
     
     client = get_ai_client()
     
     if response_schema:
-        response = client.chat.completions.parse(
+        response = await client.chat.completions.parse(
             model = model,
             messages = [
                 {
@@ -39,10 +39,10 @@ def call_gemini(system_message, user_message, response_schema = None, model="gem
                 
             },
             response_format = response_schema
-        ).choices[0].message.parsed    
-        return response
+        )  
+        return response.choices[0].message.parsed  
     else:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model = model,
             messages = [
                 {
@@ -58,5 +58,5 @@ def call_gemini(system_message, user_message, response_schema = None, model="gem
             extra_body={
                 
             }
-        ).choices[0].message.content    
-        return response
+        )   
+        return response.choices[0].message.content 
