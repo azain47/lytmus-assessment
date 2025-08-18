@@ -25,3 +25,8 @@ class RelevanceEvaluationReport(BaseModel):
     question_id: str
     similarity: RelevanceSimilarity
     alignment:  RelevanceAlignment
+
+class GeneratedSolution(BaseModel):
+    question_id: str
+    generated_solution: str
+    was_solved_with_similar_questions: bool

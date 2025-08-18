@@ -4,6 +4,8 @@ from prompts import format_relevance_alignment_system_prompt, format_relevance_a
 from ai_provider import call_gemini, get_ai_client
 import json
 import os
+import numpy as np
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -14,15 +16,23 @@ class Dataloader():
                 self.dataset = json.load(f)
         else:
             raise ValueError("Similar Questions Data path invalid.")
+    
+    def get_dataset(self):
         return self.dataset
-
+    
+    def get_random_subset(self, size):
+        return np.random.choice(self.dataset,int(size),replace=False).tolist()
+           
 class RelevanceEvaluator():
     def __init__(self, similar_questions_data):
         self.dataset = similar_questions_data
     
     def evaluate(self):
         pass
-        
+
+class SolutionBuilder():
+    pass
+      
 def main():
     print("Hello from lytmus-assessment!")
 
