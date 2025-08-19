@@ -17,7 +17,7 @@ provider = AIProvider()
 def get_ai_client():
     return provider.get_client()
 
-async def call_gemini(system_message, user_message, response_schema = None, model="gemini-2.5-flash-lite"):
+async def call_gemini(user_message, system_message="", response_schema = None, model="gemini-2.5-flash-lite", temperature = 0.65):
     
     client = get_ai_client()
     
@@ -34,9 +34,15 @@ async def call_gemini(system_message, user_message, response_schema = None, mode
                     "content": user_message
                 }
             ],
-            temperature = 0.65,
-            extra_body={
-                
+            temperature = temperature,
+            extra_body = {
+                'extra_body': {
+                    "google": {
+                        "thinking_config": {
+                            "include_thoughts": False
+                        }
+                    }
+                }
             },
             response_format = response_schema
         )  
@@ -54,9 +60,15 @@ async def call_gemini(system_message, user_message, response_schema = None, mode
                     "content": user_message
                 }
             ],
-            temperature = 0.65,
-            extra_body={
-                
-            }
+            temperature = temperature,
+            extra_body = {
+                'extra_body': {
+                    "google": {
+                        "thinking_config": {
+                            "include_thoughts": False
+                        }
+                    }
+                }
+            },
         )   
         return response.choices[0].message.content 
