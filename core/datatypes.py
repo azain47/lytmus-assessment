@@ -1,3 +1,4 @@
+from typing import List
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -38,9 +39,19 @@ class Solution(BaseModel):
 class GeneratedSolution(Solution):
     question_id: str
     was_solved_with_similar_questions: bool
-    
+
+class SolutionPerformanceAnalysis(BaseModel):
+    hypothesis: str
+    evidence: str
+
 class MetricEvaluation(BaseModel):
     winner: WinnerSolution = Field(description="Which solution was superior for this specific metric?")
     margin_of_winning: float = Field(description="A score from 0.0 (a tie) to 1.0 (complete win for the winner solution) between the solutions A and B.", ge=0.0, le=1.0)
     reasoning: str = Field(description="A concise justification.")
+
+class Insights(BaseModel):
+    recommendation: str
+    reasoning: str    
     
+class InsightReport(BaseModel):
+    insights: List[Insights]

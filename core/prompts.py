@@ -5,7 +5,7 @@ Evaluate on a scale of 0.0 to 1.0 for each dimensions.
 2. STRUCTURAL SIMILARITY (0.0 - 1.0): Are the problem structures, setup, logical/mathematical frameworks analogous?
 
 Think step-by-step before you assess the similarity. First, think about the concepts that each of the questions are referring to, then compare the concepts between questions to assess similarity. Second, comprehend the questions, and understand the structures of the problems. 
-Finally your final assessment in JSON in the following format:
+You MUST return a single, valid JSON object for your Final Assessment. The structure MUST be as follows:
 {{
     "conceptual_similarity": 0.X,
     "structural_similarity": 0.X,
@@ -18,7 +18,7 @@ relevance_alignment_system_prompt = """You are an expert {subject} professor at 
 2. SOLUTION APPROACH VIABILITY: Can the solution method from the similar questions be meaningfully applied to solve the main question?
 
 Think step-by-step before assessing the questions. First, comprehend the questions to understand what concepts/principles they are referring to, then assess if those concepts are higher level than a student's knowledge or not. Second, try to solve the MAIN QUESTION using the solution methods from the SIMILAR QUESTIONS. Assess how viable are the solution methods in solving the main question.
-Finally, return your final assessment in the following format:
+You MUST return a single, valid JSON object for your Final Assessment. The structure MUST be as follows:
 {{
     "is_difficulty_appropriate": YES/PARTIAL/NO,
     "is_solution_approach_viable": YES/PARTIAL/NO,
@@ -47,7 +47,6 @@ solution_builder_prompt = """You are an expert {subject} tutor. Your task is to 
 3. Explain reasoning behind each step.
 5. Use appropriate {subject} terminologies and concepts.
 6. Provide final answer clearly.
-</INSTRUCTIONS>
 
 <OUTPUT_FORMAT>
 You MUST return a single, valid JSON object for your solution. The structure MUST be as follows:
@@ -56,6 +55,8 @@ You MUST return a single, valid JSON object for your solution. The structure MUS
     "generated_solution": "The final step-by-step solution for the problem."
 }}
 </OUTPUT_FORMAT>
+
+</INSTRUCTIONS>
 """
 
 solution_builder_with_similar_prompt = """You are an expert {subject} tutor. Your task is to solve the given question step-by-step. Along with the question to solve, you will be given similar question(s) with their solution approaches. Use the solution approaches to guide your reasoning through problem solving.
@@ -78,7 +79,6 @@ solution_builder_with_similar_prompt = """You are an expert {subject} tutor. You
 7. Give reference to exact insights you used from similar questions' solution approaches in the thoughts ONLY, NEVER in the generated solution.
 8. Use appropriate {subject} terminologies and concepts.
 9. Provide final answer clearly.
-</INSTRUCTIONS>
 
 <OUTPUT_FORMAT>
 You MUST return a single, valid JSON object for your solution. The structure MUST be as follows:
@@ -87,6 +87,8 @@ You MUST return a single, valid JSON object for your solution. The structure MUS
     "generated_solution": "The final step-by-step solution for the problem."
 }}
 </OUTPUT_FORMAT>
+
+</INSTRUCTIONS>
 """
 
 solution_comparison_prompt = """You are an impartial and expert {subject} professor at Stanford and MIT, acting as a judge. Your task is to blindly compare two solutions, SOLUTION_A and SOLUTION_B, for the same problem (MAIN_PROBLEM) and assess which solution is better. You must be objective and provide a structured comparison based ONLY on the content provided.
@@ -123,6 +125,89 @@ solution_comparison_user_prompt="""<ORIGINAL_PROBLEM>
 {solution_b_text}
 </SOLUTION_B>
 """
+
+solution_performance_analysis_prompt = """USER:
+You are senior AI Prompt Engineer conducting a post mortem analysis. Your task is to deduce why providing SIMILAR QUESTIONS to the LLM while solving MAIN QUESTION resulted in a specific outcome.
+
+<CONTEXT>
+SUBJECT - {subject}
+JUDGE EVALUATION - Solution A was generated with help of similar questions and Solution B was generated without. A Judge evaluated both the solutions and scored them justly. 
+OUTCOME - Solution Generated with Similar Questions resulted in {outcome}.
+PERFORMANCE SCORE - {performance_score} (Value is between -1 and 1. Positive score means solution generated with help of similar questions won, Negative means it lost to the solution that was generated without help of similar questions.)
+</CONTEXT>
+
+<MAIN_QUESTION>
+{main_question}
+</MAIN_QUESTION>
+
+<SIMILAR_QUESTIONS_PROVIDED_TO_LLM>
+{similar_questions}
+</SIMILAR_QUESTIONS_PROVIDED_TO_LLM>
+
+<JUDGE_EVALUATION>
+{judge_evaluation}
+</JUDGE_EVALUATION>
+
+<INSTRUCTIONS>
+Based on all the information, form a clear hypothesis explaining the root cause of the problem. Pinpoint the specific element in the "Similar Questions" that likely led to this success or failure.
+
+<OUTPUT_FORMAT>
+You MUST return a single, valid JSON object. The structure MUST be as follows:
+{{
+    "hypothesis" : "Your hypothesis",
+    "evidence" : "Evidence gathered that support your hypothesis" 
+}}
+</OUTPUT_FORMAT>
+
+</INSTRUCTIONS>
+
+ASSISTANT:
+"""
+
+insight_generation_prompt="""You are a Lead AI Strategist. You have been given a series of root cause analyses for cases where using "similar questions" to guide an LLM either helped (successes) or hurt (failures) its performance.
+
+Your task is to synthesize these findings into a high level report with actionable recommendations. Look for recurring patterns in the analyses.
+
+<ANALYSIS_OF_SUCCESSFUL_CASES>
+{success_analysis}
+</ANALYSIS_OF_WON_CASES>
+
+<ANALYSIS_OF_FAILED_CASES>
+{failure_analysis}
+</ANALYSIS_OF_FAILED_CASES>
+ 
+<TASK>
+Based on the patterns you observe, generate 3-5 concrete, actionable recommendations to improve our prompts.
+</TASK>
+
+<OUTPUT_FORMAT>
+You MUST return a single, valid JSON object. The structure MUST be as follows:
+{{
+    "insights":[
+        {{
+            "recommendation": "...",
+            "reasoning" : "Justify why this should be improved"
+        }},
+        {{
+            "recommendation": "...",
+            "reasoning" : "..."
+        }},
+        {{...}}
+    ]
+}}
+</OUTPUT_FORMAT>
+"""
+
+def format_insight_generation_prompt(success_analysis_arr, failure_analysis_arr):
+    success_text = "\n".join([f"<analysis>{a.hypothesis}</analysis>" for a in success_analysis_arr])
+    failure_text = "\n".join([f"<analysis>{a.hypothesis}</analysis>" for a in failure_analysis_arr])
+    
+    return insight_generation_prompt.format(success_analysis = success_text, failure_analysis = failure_text)
+
+def format_solution_performance_analysis_prompt(subject, outcome, performance_score, main_question, similar_questions, judge_evaluation):
+    formatted_similar_questions = "\n\n".join([f"<SIMILAR_QUESTION_{idx + 1}>\n{sq['similar_question_text']}\n</SIMILAR_QUESTION_{idx + 1}>\n<SOLUTION_APPROACH_{idx + 1}>\n{sq['summarized_solution_approach']}\n</SOLUTION_APPROACH_{idx + 1}>" for idx,sq in enumerate(similar_questions)])
+    
+    return solution_performance_analysis_prompt.format(subject, outcome, performance_score, main_question, similar_questions=formatted_similar_questions, judge_evaluation=judge_evaluation)
 
 def format_solution_comparison_system_prompt_array(subject, metrics) -> dict[str, str]:
     prompts = {}
