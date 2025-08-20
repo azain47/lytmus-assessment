@@ -11,6 +11,11 @@ class AppropriateAlignment(Enum):
     PARTIAL = "PARTIAL"
     NO = "NO"
 
+class WinnerSolution(Enum):
+    SOLUTION_A = "SOLUTION_A"
+    SOLUTION_B = "SOLUTION_B"
+    TIE = "TIE"
+
 class RelevanceSimilarity(BaseModel):
     conceptual_similarity: float = Field(ge=0.0, le=1.0)
     structural_similarity: float = Field(ge=0.0, le=1.0) 
@@ -30,3 +35,9 @@ class GeneratedSolution(BaseModel):
     question_id: str
     generated_solution: str
     was_solved_with_similar_questions: bool
+    
+class MetricEvaluation(BaseModel):
+    winner: WinnerSolution = Field(description="Which solution was superior for this specific metric?")
+    margin_of_winning: float = Field(description="A score from 0.0 (a tie) to 1.0 (complete win for the winner solution) between the solutions A and B.", ge=0.0, le=1.0)
+    reasoning: str = Field(description="A concise justification.")
+    
