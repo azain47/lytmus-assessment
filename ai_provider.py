@@ -39,6 +39,7 @@ async def call_gemini(user_message, system_message="", response_schema = None, m
                 'extra_body': {
                     "google": {
                         "thinking_config": {
+                            "thinking_budget": "-1",
                             "include_thoughts": False
                         }
                     }
@@ -65,6 +66,7 @@ async def call_gemini(user_message, system_message="", response_schema = None, m
                 'extra_body': {
                     "google": {
                         "thinking_config": {
+                            "thinking_budget": "-1",
                             "include_thoughts": False
                         }
                     }
