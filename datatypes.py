@@ -31,9 +31,12 @@ class RelevanceEvaluationReport(BaseModel):
     similarity: RelevanceSimilarity
     alignment:  RelevanceAlignment
 
-class GeneratedSolution(BaseModel):
-    question_id: str
+class Solution(BaseModel):
+    thoughts: str
     generated_solution: str
+    
+class GeneratedSolution(Solution):
+    question_id: str
     was_solved_with_similar_questions: bool
     
 class MetricEvaluation(BaseModel):
