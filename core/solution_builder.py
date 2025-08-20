@@ -21,9 +21,11 @@ class SolutionBuilder():
             main_question = data['question_text']
             similar_questions_array = data['similar_questions']
             
+            # separate prompts for generating solutions with and without similar questions
             user_prompt = format_solution_builder_prompt(subject, main_question, with_similar=False)
             user_prompt_with_similar = format_solution_builder_prompt(subject, main_question, similar_questions_array, with_similar=True)
-
+            
+            # generate both solutions and append to respective arrays
             response = await call_gemini(user_prompt, response_schema=Solution, temperature=0.1)
             solution = GeneratedSolution(
                 **response.model_dump(),

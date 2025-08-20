@@ -9,17 +9,20 @@ from core.datatypes import WinnerSolution
 
 class ComparativeAnalyzer():
     def __init__(self,similar_question_data, generated_solutions_w_similar, generated_solutions_wo_similar, reports_dir):
+        # convert arrays to dict with question_id as key for easier retrieval
         self.dataset = convert_list_to_dict_with_key(similar_question_data, 'question_id')
         self.solutions_with_similar = convert_list_to_dict_with_key(generated_solutions_w_similar, 'question_id')
         self.solutions_without_similar = convert_list_to_dict_with_key(generated_solutions_wo_similar, 'question_id')
         self.reports_dir = reports_dir
         
+        # define metrics, this is dynamic, can be extended or modified.
         self.solution_comparison_metrics = {
             "CORRECTNESS": "- Is the final answer correct?\n- Is the application of formulas, principles, and calculations accurate?",
             "COMPLETENESS": "- Are all necessary steps included to logically reach the conclusion?\n-Are there any 'magic steps' or unexplained logical jumps?",
             "CLARITY": "- Is the explanation for each step clear, concise, and easy for a student to follow?\n- Is the overall structure logical?"
         }
         
+        # basically create a unified dataset with both solutions 
         for ques_id, data in self.dataset.items():
             data['solution_generated_with_similar'] = self.solutions_with_similar.get(ques_id)['generated_solution']
             data['solution_generated_without_similar'] = self.solutions_without_similar.get(ques_id)['generated_solution']
@@ -35,10 +38,12 @@ class ComparativeAnalyzer():
             solution_b = data['solution_generated_without_similar']
             
             system_prompts = format_solution_comparison_system_prompt_array(subject, self.solution_comparison_metrics)
+            
+            # was initially thinking of flipping sol a and sol b to lessen bias
             user_prompt = format_solution_comparison_user_prompt(main_question, solution_a, solution_b)
             
-            analysis_report = {"question_id": ques_id} 
-            
+            analysis_report = {"question_id": ques_id}    
+            # just a hack to show the exact metric being evaluated in tqdm
             progress = tqdm(system_prompts.items(), total=len(system_prompts), desc="Evaluating Metrics", unit="Metric")
             for metric, system_prompt in progress:
                 progress.set_postfix_str(f"Evaluating {metric}")
@@ -57,7 +62,7 @@ class ComparativeAnalyzer():
     async def generate_insights(self):
         print("========= Starting Insight Generation =========")
         processed_analysis = []
-        
+        self.analysed_dataset = json.load(open(os.path.join(self.reports_dir,"comparative_analysis_report.json"), "r"))
         for analysis in self.analysed_dataset:
             ques_id = analysis['question_id']
             
@@ -67,13 +72,14 @@ class ComparativeAnalyzer():
                 winner = analysis[metric_normalized]['winner']
                 margin_winner = analysis[metric_normalized]['margin_of_winning']
                 
-                metric_score = 0
+                metric_score = 0.0
                 # Positive score for solution A, i.e. Sol generated with similar questions.
-                if winner == WinnerSolution.SOLUTION_A:
+                if winner == WinnerSolution.SOLUTION_A.value:
                     metric_score = margin_winner
                 # Negative score for solution B, i.e. Sol generated without similar questions.
-                elif winner == WinnerSolution.SOLUTION_B:
+                elif winner == WinnerSolution.SOLUTION_B.value:
                     metric_score = -margin_winner
+                
                 scores[metric_normalized] = metric_score
             # average of all metric scores 
             average_score = sum(scores.values()) / len(scores)
@@ -90,10 +96,11 @@ class ComparativeAnalyzer():
         print("========= Full Analysis Report Generated. Check full_analysis_report.json for details. =========")   
             
         # Determine when Solution A (Generated WITH similar questions) won and lost.
-        threshold = 0.3
+        threshold = 0.2
         strong_wins = [w for w in processed_analysis if w['average_score'] > threshold]
         strong_losses = [l for l in processed_analysis if l['average_score'] < -threshold]
         
+        # couldnt pass the threshold, so no strong wins or losses
         if strong_losses == [] and strong_wins == []:
             print("No strong wins or losses found. Here is the full analysis report:")
             for analysis in processed_analysis:
@@ -123,7 +130,7 @@ class ComparativeAnalyzer():
             loss_analysis = response.model_dump(mode="json")
             loss_analysis['question_id'] = original_data['question_id']
             loss_analysis_arr.append(loss_analysis)
-        
+            
         insight_user_prompt = format_insight_generation_prompt(win_analysis_arr, loss_analysis_arr)
         
         final_report: InsightReport = await call_gemini(
@@ -131,9 +138,9 @@ class ComparativeAnalyzer():
             response_schema=InsightReport
         )
              
-        for insight in final_report.prompt_engineering_insights:
-            print(f"\n💡 RECOMMENDATION: {insight.recommendation}")
-            print(f"   JUSTIFICATION: {insight.justification}")
+        for idx,insight in enumerate(final_report.insights):
+            print(f"\nRECOMMENDATION {idx + 1}: {insight.recommendation}")
+            print(f"Reasoning: {insight.reasoning}\n")
 
         print("========= Insight Generation Complete. Check the console for insights. =========")
         

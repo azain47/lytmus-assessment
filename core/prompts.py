@@ -199,15 +199,15 @@ You MUST return a single, valid JSON object. The structure MUST be as follows:
 """
 
 def format_insight_generation_prompt(success_analysis_arr, failure_analysis_arr):
-    success_text = "\n".join([f"<analysis>{a.hypothesis}</analysis>" for a in success_analysis_arr])
-    failure_text = "\n".join([f"<analysis>{a.hypothesis}</analysis>" for a in failure_analysis_arr])
+    success_text = "\n".join([f"<analysis>{a['hypothesis']}</analysis>" for a in success_analysis_arr])
+    failure_text = "\n".join([f"<analysis>{a['hypothesis']}</analysis>" for a in failure_analysis_arr])
     
     return insight_generation_prompt.format(success_analysis = success_text, failure_analysis = failure_text)
 
 def format_solution_performance_analysis_prompt(subject, outcome, performance_score, main_question, similar_questions, judge_evaluation):
     formatted_similar_questions = "\n\n".join([f"<SIMILAR_QUESTION_{idx + 1}>\n{sq['similar_question_text']}\n</SIMILAR_QUESTION_{idx + 1}>\n<SOLUTION_APPROACH_{idx + 1}>\n{sq['summarized_solution_approach']}\n</SOLUTION_APPROACH_{idx + 1}>" for idx,sq in enumerate(similar_questions)])
     
-    return solution_performance_analysis_prompt.format(subject, outcome, performance_score, main_question, similar_questions=formatted_similar_questions, judge_evaluation=judge_evaluation)
+    return solution_performance_analysis_prompt.format(subject=subject, outcome=outcome, performance_score=performance_score, main_question=main_question, similar_questions=formatted_similar_questions, judge_evaluation=judge_evaluation)
 
 def format_solution_comparison_system_prompt_array(subject, metrics) -> dict[str, str]:
     prompts = {}
